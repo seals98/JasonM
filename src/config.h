@@ -11,6 +11,7 @@
 #define APP_SLOT_ADDR       0x08020000u              /* header lives here      */
 #define APP_SLOT_SIZE       0x001E0000u              /* header + app           */
 #define APP_HEADER_SIZE     0x400u                   /* keeps VTOR 1 KB aligned */
+#define FLASH_SECTOR_SIZE  0x00020000u              /* erase granularity      */
 #define APP_VECTOR_ADDR     (APP_SLOT_ADDR + APP_HEADER_SIZE)
 
 /* ---- RAM regions an application's initial MSP may point into (end address

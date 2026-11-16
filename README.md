@@ -32,6 +32,21 @@ make         # needs arm-none-eabi-gcc
 make test    # host-side unit tests for validation + CRC
 ```
 
-## Not included
-Clock setup, update transport (UART/USB/…) and flash programming are board-specific:
-override the weak `board_*` functions in `src/board.c`.
+## Firmware update (UART, XMODEM-CRC)
+If the app is missing/invalid (or a boot request is set), the bootloader prints a banner on
+USART3 (PD8/PD9, Nucleo-H743ZI ST-Link VCP, 115200 8N1) and sends `C`. Send `app_signed.bin`
+with any XMODEM-CRC client (128 B or 1 KB blocks), e.g. `sz --xmodem`/`lrzsz`, TeraTerm, minicom.
+Flash sectors are erased lazily right before they are written; after the transfer the image is
+validated and, if good, started immediately.
+
+| File | Role |
+|---|---|
+| `src/xmodem.c` | Hardware-independent XMODEM-CRC receiver (host-tested) |
+| `src/flash_h7.c` | STM32H7 flash driver (sector erase, 256-bit word program) |
+| `src/board_stm32h7.c` | Clock-free board init, SysTick time base, USART3, update loop |
+| `src/board.c` | Weak defaults — port to another chip by replacing the two STM32H7 files |
+
+Size: ~2.8 KB of the 128 KB bootloader region (`make` prints it; the linker fails if it overflows).
+
+The STM32H7 register-level code (flash, USART, GPIO, RCC) compiles but has **not** been run on
+hardware — verify on your board.

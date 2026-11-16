@@ -68,4 +68,14 @@ static inline void caches_disable(void)
     }
     SCB_ICIALLU = 0; SCB_BPIALL = 0; dsb(); isb();
 }
+
+#define SYST_RVR    REG32(0xE000E014u)
+#define SYST_CVR    REG32(0xE000E018u)
+
+/* Drop every D-cache line without writing back (bootloader keeps no dirty data in cached RAM). */
+static inline void dcache_invalidate_all(void)
+{
+    if (SCB_CCR & SCB_CCR_DC) dcache_by_setway(&SCB_DCISW);
+}
+static inline void icache_invalidate_all(void) { SCB_ICIALLU = 0; dsb(); isb(); }
 #endif
