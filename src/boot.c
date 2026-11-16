@@ -4,11 +4,7 @@
 
 static int in_ram(uint32_t sp)
 {
-    static const struct { uint32_t lo, hi; } r[] = { RAM_REGIONS_INIT };
-    for (unsigned i = 0; i < sizeof r / sizeof r[0]; i++)
-        if (sp > r[i].lo && sp <= r[i].hi)   /* top-of-stack may equal the end */
-            return 1;
-    return 0;
+    return sp > RAM_BASE && sp <= RAM_END;      /* top-of-stack may equal RAM_END */
 }
 
 boot_status_t boot_validate(const uint8_t *mem, uint32_t addr, uint32_t size)

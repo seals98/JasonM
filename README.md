@@ -11,6 +11,11 @@ memory map; adjust `src/config.h` and `linker/bootloader.ld` for your part.
 | └ image header | `0x08020000` | 0x400 |
 | └ app vector table | `0x08020400` | — |
 
+## RAM
+2 MB contiguous at `0x20000000` (`RAM_BASE`/`RAM_SIZE` in `src/config.h`, `RAM` in the linker script).
+The bootloader's `.data/.bss/.noinit` sit at the bottom and its stack starts at the top (`0x20200000`);
+an app's initial SP is accepted anywhere in `(0x20000000, 0x20200000]`.
+
 ## Boot flow
 1. `board_init()`, enable I/D-cache.
 2. If the app left `BOOT_REQUEST_MAGIC` in `boot_request` (`.noinit` RAM) → stay in update mode.

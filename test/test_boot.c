@@ -42,6 +42,10 @@ int main(void)
 
     make(0x08000000u, APP_VECTOR_ADDR + 0x101u, 0x1000);       /* SP in flash */
     CHECK(boot_validate(slot, APP_SLOT_ADDR, APP_SLOT_SIZE) == BOOT_ERR_SP);
+    make(0x20200000u, APP_VECTOR_ADDR + 0x101u, 0x1000);       /* top of 2 MB RAM is valid */
+    CHECK(boot_validate(slot, APP_SLOT_ADDR, APP_SLOT_SIZE) == BOOT_OK);
+    make(0x20200008u, APP_VECTOR_ADDR + 0x101u, 0x1000);       /* past the end of RAM */
+    CHECK(boot_validate(slot, APP_SLOT_ADDR, APP_SLOT_SIZE) == BOOT_ERR_SP);
     make(0x20020004u, APP_VECTOR_ADDR + 0x101u, 0x1000);       /* unaligned SP */
     CHECK(boot_validate(slot, APP_SLOT_ADDR, APP_SLOT_SIZE) == BOOT_ERR_SP);
 

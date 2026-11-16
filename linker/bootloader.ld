@@ -4,10 +4,10 @@ ENTRY(Reset_Handler)
 MEMORY
 {
     FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 128K
-    DTCM  (rwx) : ORIGIN = 0x20000000, LENGTH = 128K
+    RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 2M
 }
 
-_estack = ORIGIN(DTCM) + LENGTH(DTCM);
+_estack = ORIGIN(RAM) + LENGTH(RAM);
 
 SECTIONS
 {
@@ -15,12 +15,12 @@ SECTIONS
     .text : { *(.text*) *(.rodata*) . = ALIGN(4); } > FLASH
 
     _sidata = LOADADDR(.data);
-    .data : { _sdata = .; *(.data*) . = ALIGN(4); _edata = .; } > DTCM AT > FLASH
+    .data : { _sdata = .; *(.data*) . = ALIGN(4); _edata = .; } > RAM AT > FLASH
 
-    .bss  : { _sbss = .; *(.bss*) *(COMMON) . = ALIGN(4); _ebss = .; } > DTCM
+    .bss  : { _sbss = .; *(.bss*) *(COMMON) . = ALIGN(4); _ebss = .; } > RAM
 
     /* Survives reset (not zeroed by startup) so the app can leave a boot request. */
-    .noinit (NOLOAD) : { . = ALIGN(4); *(.noinit*) } > DTCM
+    .noinit (NOLOAD) : { . = ALIGN(4); *(.noinit*) } > RAM
 
     /DISCARD/ : { *(.ARM.exidx*) *(.comment) }
 }
