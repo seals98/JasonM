@@ -16,6 +16,15 @@ memory map; adjust `src/config.h` and `linker/bootloader.ld` for your part.
 The bootloader's `.data/.bss/.noinit` sit at the bottom and its stack starts at the top (`0x20200000`);
 an app's initial SP is accepted anywhere in `(0x20000000, 0x20200000]`.
 
+## Clock and GDMA
+- Core clock target: 750 MHz (`CORE_CLOCK_HZ` in `src/config.h`). The PLL/flash wait-state setup is chip
+  specific: implement `board_clock_init()` (weak, called first from `board_init()`). `systick_start_1khz()`
+  in `src/cm7.h` gives a polled 1 ms time base from the core clock.
+- GDMA: `dma_copy()` (`src/dma.c`) does the Cortex-M7 D-cache clean/invalidate around a transfer; only
+  `gdma_copy_raw()` is chip specific. Its weak default copies with the CPU, so nothing breaks before the
+  GDMA port exists. Nothing in the boot path calls it yet — it is the integration point for UART RX,
+  flash-write staging or image copy once the chip and use case are fixed.
+
 ## Boot flow
 1. `board_init()`, enable I/D-cache.
 2. If the app left `BOOT_REQUEST_MAGIC` in `boot_request` (`.noinit` RAM) → stay in update mode.

@@ -2,7 +2,11 @@
  * (clock tree, UART/USB/QSPI, status LED, flash driver, ...). */
 #include "boot.h"
 
-__attribute__((weak)) void board_init(void) {}
+/* Called first by a board's board_init(): bring the core up to CORE_CLOCK_HZ (PLL, flash wait
+ * states, voltage scaling). Chip specific; the default leaves the reset clock untouched. */
+__attribute__((weak)) void board_clock_init(void) {}
+
+__attribute__((weak)) void board_init(void) { board_clock_init(); }
 __attribute__((weak)) void board_deinit(void) {}
 
 /* Default: nothing to update with, so just halt. A real board should receive

@@ -7,7 +7,7 @@ CFLAGS  := -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard \
            -Os -g -Wall -Wextra -ffunction-sections -fdata-sections -ffreestanding
 LDFLAGS := -T linker/bootloader.ld -nostartfiles -nostdlib -Wl,--gc-sections -Wl,-Map=build/bootloader.map -lgcc
 
-SRCS := src/startup.c src/main.c src/boot.c src/crc32.c src/board.c src/xmodem.c src/flash_h7.c src/board_stm32h7.c
+SRCS := src/startup.c src/main.c src/boot.c src/crc32.c src/board.c src/xmodem.c src/flash_h7.c src/board_stm32h7.c src/dma.c
 OBJS := $(SRCS:src/%.c=build/%.o)
 
 all: build/bootloader.bin

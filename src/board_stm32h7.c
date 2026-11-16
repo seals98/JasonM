@@ -56,9 +56,7 @@ static void uart_puthex(uint32_t v)
 
 void board_init(void)
 {
-    SYST_RVR = CORE_HZ / 1000u - 1u;
-    SYST_CVR = 0;
-    SYST_CSR = 5u;                        /* core clock, enabled, no interrupt */
+    systick_start_1khz(CORE_HZ);
 
     RCC_AHB4ENR  |= (1u << 3);            /* GPIOD */
     RCC_APB1LENR |= (1u << 18);           /* USART3 */

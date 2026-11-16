@@ -20,6 +20,11 @@
 #define RAM_SIZE            0x00200000u              /* 2 MB */
 #define RAM_END             (RAM_BASE + RAM_SIZE)
 
+/* ---- Clock: core runs at 750 MHz once board_clock_init() has configured the PLL.
+ * SysTick's 24-bit reload must fit a 1 ms period. ---- */
+#define CORE_CLOCK_HZ       750000000u
+_Static_assert(CORE_CLOCK_HZ / 1000u - 1u <= 0xFFFFFFu, "SysTick 1 ms reload exceeds 24 bits");
+
 /* ---- Boot request: application writes this to .noinit RAM and resets to
  * force the bootloader to stay in update mode. ---- */
 #define BOOT_REQUEST_MAGIC  0xB007B007u

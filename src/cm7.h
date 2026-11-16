@@ -18,6 +18,9 @@
 #define SCB_CSSELR  REG32(0xE000ED84u)
 #define SCB_CCSIDR  REG32(0xE000ED80u)
 #define SCB_BPIALL  REG32(0xE000EF78u)
+#define SCB_DCIMVAC  REG32(0xE000EF5Cu)   /* invalidate D-cache line by address */
+#define SCB_DCCMVAC  REG32(0xE000EF68u)   /* clean D-cache line by address      */
+#define SCB_DCCIMVAC REG32(0xE000EF70u)   /* clean + invalidate by address      */
 
 #define SCB_CCR_IC  (1u << 17)
 #define SCB_CCR_DC  (1u << 16)
@@ -78,4 +81,37 @@ static inline void dcache_invalidate_all(void)
     if (SCB_CCR & SCB_CCR_DC) dcache_by_setway(&SCB_DCISW);
 }
 static inline void icache_invalidate_all(void) { SCB_ICIALLU = 0; dsb(); isb(); }
+
+#define CACHE_LINE 32u
+
+/* DMA coherency helpers. Buffers handed to a DMA engine should be CACHE_LINE-aligned
+ * and a multiple of CACHE_LINE long; unaligned edges are handled safely but cost a write-back. */
+static inline void dcache_clean_range(const void *addr, uint32_t len)   /* before DMA reads RAM */
+{
+    if (!(SCB_CCR & SCB_CCR_DC) || !len) return;
+    dsb();
+    for (uint32_t p = (uint32_t)addr & ~(CACHE_LINE - 1u); p < (uint32_t)addr + len; p += CACHE_LINE)
+        SCB_DCCMVAC = p;
+    dsb(); isb();
+}
+
+static inline void dcache_invalidate_range(void *addr, uint32_t len)    /* after DMA writes RAM */
+{
+    if (!(SCB_CCR & SCB_CCR_DC) || !len) return;
+    uint32_t start = (uint32_t)addr, end = start + len;
+    dsb();
+    for (uint32_t p = start & ~(CACHE_LINE - 1u); p < end; p += CACHE_LINE) {
+        int whole = (p >= start) && (p + CACHE_LINE <= end);
+        if (whole) SCB_DCIMVAC = p; else SCB_DCCIMVAC = p;   /* keep neighbours' dirty data */
+    }
+    dsb(); isb();
+}
+
+/* Free-running 1 kHz SysTick (no interrupt, poll COUNTFLAG). 24-bit reload limits core_hz to 16.7 GHz/1000. */
+static inline void systick_start_1khz(uint32_t core_hz)
+{
+    SYST_RVR = core_hz / 1000u - 1u;
+    SYST_CVR = 0;
+    SYST_CSR = 5u;                        /* core clock, enabled, no interrupt */
+}
 #endif
