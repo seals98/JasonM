@@ -60,6 +60,7 @@ and put `app_signed.bin` at `0x60020000` (or send it over UART).
 | `src/hal.h` | **the porting interface**: clock, WDT, UART, QSPI, I2C, I3C, GDMA, cache |
 | `platform/template/` | porting skeleton (see below) |
 | `platform/sim/` | host model of the HAL incl. a strict NOR simulator |
+| `qemu/` | example QEMU peripheral model (I2C master) + firmware driver/demo; see `qemu/README.md` |
 
 ## Porting to a SoC
 `cp -r platform/template platform/<soc>`, fill every `TODO` (clock/PLL, WDT, UART, QSPI indirect mode,

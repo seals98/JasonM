@@ -1,0 +1,61 @@
+--- a/hw/arm/mps2.c
++++ b/hw/arm/mps2.c
+@@ -44,6 +44,8 @@
+ #include "hw/misc/mps2-fpgaio.h"
+ #include "hw/ssi/pl022.h"
+ #include "hw/i2c/arm_sbcon_i2c.h"
++#include "hw/i2c/jm_i2c.h"
++#include "hw/nvram/eeprom_at24c.h"
+ #include "hw/net/lan9118.h"
+ #include "net/net.h"
+ #include "hw/watchdog/cmsdk-apb-watchdog.h"
+@@ -459,6 +461,15 @@
+     }
+     create_unimplemented_device("i2s", 0x40024000, 0x400);
+ 
++    /* Example controller from the bootloader project: jm-i2c at 0x40030000 with a 256-byte
++     * AT24C EEPROM (7-bit address 0x50) on its bus. Other devices: -device <type>,bus=<id>. */
++    {
++        DeviceState *jm = sysbus_create_simple(TYPE_JM_I2C, 0x40030000, NULL);
++        BusState *jmbus = qdev_get_child_bus(jm, "i2c");
++
++        at24c_eeprom_init(I2C_BUS(jmbus), 0x50, 256);
++    }
++
+     /* In hardware this is a LAN9220; the LAN9118 is software compatible
+      * except that it doesn't support the checksum-offload feature.
+      */
+--- a/hw/arm/Kconfig
++++ b/hw/arm/Kconfig
+@@ -574,6 +574,8 @@
+     select PL080    # DMA controller
+     select SPLIT_IRQ
+     select UNIMP
++    select JM_I2C   # example I2C master (qemu/model)
++    select AT24C    # I2C EEPROM on it
+     select CMSDK_APB_WATCHDOG
+     select ARM_SBCON_I2C
+ 
+--- a/hw/i2c/Kconfig
++++ b/hw/i2c/Kconfig
+@@ -18,6 +18,10 @@
+     bool
+     select BITBANG_I2C
+ 
++config JM_I2C
++    bool
++    select I2C
++
+ config ACPI_SMBUS
+     bool
+     select SMBUS
+--- a/hw/i2c/meson.build
++++ b/hw/i2c/meson.build
+@@ -13,6 +13,7 @@
+ i2c_ss.add(when: 'CONFIG_NPCM7XX', if_true: files('npcm7xx_smbus.c'))
+ i2c_ss.add(when: 'CONFIG_SMBUS_EEPROM', if_true: files('smbus_eeprom.c'))
+ i2c_ss.add(when: 'CONFIG_ARM_SBCON_I2C', if_true: files('arm_sbcon_i2c.c'))
++i2c_ss.add(when: 'CONFIG_JM_I2C', if_true: files('jm_i2c.c'))
+ i2c_ss.add(when: 'CONFIG_OMAP', if_true: files('omap_i2c.c'))
+ i2c_ss.add(when: 'CONFIG_PPC4XX', if_true: files('ppc4xx_i2c.c'))
+ i2c_ss.add(when: 'CONFIG_PCA954X', if_true: files('i2c_mux_pca954x.c'))
