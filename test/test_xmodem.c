@@ -4,6 +4,9 @@
 #include "boot.h"
 #include "config.h"
 #include "crc32.h"
+#include "slot.h"
+#include "nor.h"
+#include "sim.h"
 
 static int fails;
 #define CHECK(c) do { if (!(c)) { printf("FAIL %s:%d %s\n", __FILE__, __LINE__, #c); fails++; } } while (0)
@@ -54,12 +57,8 @@ static int m_getc(uint32_t t)
     return v;
 }
 
-static uint8_t flash[APP_SLOT_SIZE];
-static int m_write(uint32_t off, const uint8_t *d, uint32_t n)
-{
-    if (off + n > sizeof flash) return -1;
-    memcpy(flash + off, d, n); return 0;
-}
+#define flash (sim_nor + (APP_SLOT_ADDR - QSPI_BASE_ADDR))      /* XIP view of the slot */
+static int m_write(uint32_t off, const uint8_t *d, uint32_t n) { return flash_program(off, d, n); }
 static int fail_write(uint32_t off, const uint8_t *d, uint32_t n) { (void)off; (void)d; (void)n; return -1; }
 
 static const xmodem_io_t io = { m_getc, m_putc, m_write };
@@ -82,34 +81,35 @@ static void run(int blk)
     size_t n = make_image(img, 5000);
 
     /* clean transfer -> flash holds a valid image */
-    memset(flash, 0xFF, sizeof flash); build(img, n, blk);
+    sim_nor_reset(); flash_begin(); build(img, n, blk);
     int r = xmodem_receive(&io, buf, APP_SLOT_SIZE);
     CHECK(r >= (int)n && r - (int)n < blk);
     CHECK(memcmp(flash, img, n) == 0);
     CHECK(boot_validate(flash, APP_SLOT_ADDR, APP_SLOT_SIZE) == BOOT_OK);
     CHECK(naks == 0 && cans == 0 && acks == npkt);
+    CHECK(sim_errors == 0 && sim_xip == 1);
 
     /* corrupted packet -> NAK + retransmit, result still identical */
-    memset(flash, 0xFF, sizeof flash); build(img, n, blk);
+    sim_nor_reset(); flash_begin(); build(img, n, blk);
     corrupt_idx = 2; corrupt_active = 1;
     r = xmodem_receive(&io, buf, APP_SLOT_SIZE);
     CHECK(r >= (int)n && naks == 1);
     CHECK(boot_validate(flash, APP_SLOT_ADDR, APP_SLOT_SIZE) == BOOT_OK);
 
     /* sender repeats a block (lost ACK) -> duplicate is ACKed but not re-written */
-    memset(flash, 0xFF, sizeof flash); build(img, n, blk);
+    sim_nor_reset(); flash_begin(); build(img, n, blk);
     dup_idx = 1;
     r = xmodem_receive(&io, buf, APP_SLOT_SIZE);
     CHECK(r >= (int)n && acks == npkt + 1);
     CHECK(boot_validate(flash, APP_SLOT_ADDR, APP_SLOT_SIZE) == BOOT_OK);
 
     /* image bigger than the slot -> cancelled */
-    build(img, n, blk);
+    sim_nor_reset(); flash_begin(); build(img, n, blk);
     CHECK(xmodem_receive(&io, buf, 1000) == XM_ERR_TOO_BIG && cans == 3);
 
     /* flash write failure -> cancelled */
     xmodem_io_t bad = { m_getc, m_putc, fail_write };
-    build(img, n, blk);
+    sim_nor_reset(); flash_begin(); build(img, n, blk);
     CHECK(xmodem_receive(&bad, buf, APP_SLOT_SIZE) == XM_ERR_WRITE && cans == 3);
 }
 

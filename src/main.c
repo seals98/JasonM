@@ -1,6 +1,7 @@
 #include "boot.h"
 #include "config.h"
 #include "cm7.h"
+#include "hal.h"
 
 /* An application sets this to BOOT_REQUEST_MAGIC and resets to stay in the bootloader. */
 volatile uint32_t boot_request __attribute__((section(".noinit")));
@@ -36,6 +37,7 @@ int main(void)
     boot_request = 0;
 
     for (;;) {
+        hal_wdt_kick();
         if (!stay) {
             st = boot_validate((const uint8_t *)APP_SLOT_ADDR, APP_SLOT_ADDR, APP_SLOT_SIZE);
             if (st == BOOT_OK) {

@@ -1,21 +1,30 @@
-/* Cortex-M7 bootloader, STM32H7-style memory map. Keep in sync with src/config.h. */
+/* Cortex-M7 bootloader executing in place from QSPI NOR (Boot ROM starts it).
+ * Keep addresses in sync with src/config.h. */
 ENTRY(Reset_Handler)
 
 MEMORY
 {
-    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 128K
-    RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 2M
+    QSPI (rx)  : ORIGIN = 0x60000000, LENGTH = 128K
+    RAM  (rwx) : ORIGIN = 0x20000000, LENGTH = 2M
 }
 
 _estack = ORIGIN(RAM) + LENGTH(RAM);
+BOOT_ROM_HDR_SIZE = 0x1000;
 
 SECTIONS
 {
-    .isr_vector : { KEEP(*(.isr_vector)) } > FLASH
-    .text : { *(.text*) *(.rodata*) . = ALIGN(4); } > FLASH
+    /* Image header/FCB/IVT the Boot ROM parses: filled in by the SoC port (platform/<name>). */
+    .boot_header : {
+        KEEP(*(.boot_header))
+        . = ORIGIN(QSPI) + BOOT_ROM_HDR_SIZE;
+    } > QSPI
 
+    .isr_vector : { . = ALIGN(256); KEEP(*(.isr_vector)) } > QSPI
+    .text : { *(.text*) *(.rodata*) . = ALIGN(4); } > QSPI
+
+    /* .ramfunc runs from RAM so flash can be erased/programmed with XIP switched off. */
     _sidata = LOADADDR(.data);
-    .data : { _sdata = .; *(.data*) . = ALIGN(4); _edata = .; } > RAM AT > FLASH
+    .data : { _sdata = .; *(.data*) *(.ramfunc*) . = ALIGN(4); _edata = .; } > RAM AT > QSPI
 
     .bss  : { _sbss = .; *(.bss*) *(COMMON) . = ALIGN(4); _ebss = .; } > RAM
 

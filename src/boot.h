@@ -31,10 +31,9 @@ boot_status_t boot_validate(const uint8_t *mem, uint32_t addr, uint32_t size);
 /* Hand control to the vector table at vt_addr. Never returns. */
 void boot_jump(uint32_t vt_addr) __attribute__((noreturn));
 
-/* Board hooks (weak defaults in board.c). */
-void board_clock_init(void);   /* optional: raise core clock to CORE_CLOCK_HZ */
-void board_init(void);
-void board_deinit(void);
-void board_update_loop(boot_status_t why);   /* must not return unless a new image was installed */
+/* Board glue (src/board.c). */
+void board_init(void);                       /* clock, watchdog, UART, QSPI */
+void board_deinit(void);                     /* quiesce what the application should find at reset state */
+void board_update_loop(boot_status_t why);   /* returns only after a valid new image was installed */
 
 #endif
