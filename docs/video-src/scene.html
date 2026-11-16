@@ -1,0 +1,158 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:#0f172a}
+svg{display:block}
+text{font-family:'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif}
+.mono{font-family:'WenQuanYi Zen Hei Mono','DejaVu Sans Mono',monospace}
+</style></head><body>
+<svg id="s" width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg>
+<script>
+const NS='http://www.w3.org/2000/svg', S=document.getElementById('s');
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const prog=(t,a,d)=>ease(clamp((t-a)/d));
+function el(tag,at,parent=S,txt){const e=document.createElementNS(NS,tag);for(const k in at)e.setAttribute(k,at[k]);if(txt!=null)e.textContent=txt;parent.appendChild(e);return e}
+function lines(parent,x,y,arr,size,anchor,fill,gap=1.3,cls){
+  const n=arr.length,y0=y-(n-1)*size*gap/2;
+  return arr.map((l,i)=>el('text',{x,y:y0+i*size*gap,'font-size':size,'text-anchor':anchor,'dominant-baseline':'central',fill,class:cls||''},parent,l));
+}
+const C={bg:'#0f172a',panel:'#1e293b',line:'#475569',txt:'#e2e8f0',mute:'#94a3b8',blue:'#2563eb',blueL:'#93c5fd',green:'#10b981',greenD:'#0f3d2e',amber:'#f59e0b',red:'#ef4444',purple:'#8b5cf6'};
+
+el('rect',{width:1920,height:1080,fill:C.bg});
+// header
+el('rect',{x:0,y:0,width:1920,height:92,fill:'#111c33'});
+el('text',{x:60,y:46,'font-size':38,'font-weight':'bold','dominant-baseline':'central',fill:'white'},S,'Cortex-M7 부트로더 · 부팅 흐름');
+el('text',{x:1860,y:46,'font-size':22,'text-anchor':'end','dominant-baseline':'central',fill:C.mute},S,'750 MHz · RAM 2 MB · QSPI NOR (XIP)');
+
+// ---- flow nodes ----
+const NODES=[
+ {a:2.5,b:5,  l:['전원 ON / 리셋'],k:'n'},
+ {a:5,b:8,    l:['Boot ROM → 부트로더 시작','QSPI에서 XIP 실행'],k:'n'},
+ {a:8,b:11,   l:['board_init()','클럭 · WDT · UART · QSPI'],k:'n'},
+ {a:11,b:13,  l:['I / D 캐시 켜기'],k:'n'},
+ {a:13,b:15,  l:['업데이트 요청?','boot_request 확인'],k:'d',res:'아니오'},
+ {a:15,b:19,  l:['이미지 검증','boot_validate()'],k:'n'},
+ {a:19,b:21,  l:['이미지 유효?'],k:'d',res:'예'},
+ {a:21,b:25,  l:['앱으로 점프','boot_jump()'],k:'n'},
+ {a:25,b:27,  l:['앱 실행'],k:'n'},
+];
+const NX=60,NW=720,NH=76,NY0=130,NST=92;
+NODES.forEach((n,i)=>{
+  n.y=NY0+i*NST;
+  n.g=el('g',{});
+  n.r=el('rect',{x:NX,y:n.y,width:NW,height:NH,rx:n.k==='d'?38:12,'stroke-width':3},n.g);
+  n.t=lines(n.g,NX+NW/2,n.y+NH/2,n.l,n.l.length>1?26:30,'middle','white',1.35);
+  n.ck=el('text',{x:NX+NW-26,y:n.y+NH/2,'font-size':34,'text-anchor':'end','dominant-baseline':'central',fill:C.green,'font-weight':'bold'},n.g,'');
+  n.bd=el('text',{x:NX+36,y:n.y+NH/2,'font-size':24,'text-anchor':'start','dominant-baseline':'central',fill:C.amber,'font-weight':'bold'},n.g,'');
+  if(i<NODES.length-1) n.ln=el('line',{x1:NX+NW/2,y1:n.y+NH,x2:NX+NW/2,y2:n.y+NST,stroke:C.line,'stroke-width':3});
+});
+
+// ---- caption area ----
+const CAPS=[
+ [2.5,5,'1. 전원이 켜집니다',['리셋 직후 CPU는 칩 안의 Boot ROM부터 실행합니다']],
+ [5,8,'2. Boot ROM이 부트로더를 시작합니다',['QSPI 플래시의 이미지 헤더를 읽고 0x60001000의 벡터로 진입','코드는 플래시에서 직접 실행합니다 (XIP)']],
+ [8,11,'3. 보드를 초기화합니다',['클럭 750 MHz → 워치독 5초 시작 → UART → NOR 플래시 확인']],
+ [11,13,'4. 캐시를 켭니다',['긴 CRC 계산이 빠르도록 I/D 캐시를 활성화합니다']],
+ [13,15,'5. 업데이트 요청이 있나요?',['앱이 RAM(.noinit)에 남긴 boot_request 매직을 확인합니다','→ 요청 없음']],
+ [15,19,'6. 앱 이미지를 검증합니다',['하나라도 실패하면 앱을 실행하지 않습니다']],
+ [19,21,'7. 이미지가 유효합니다',['모든 검증을 통과했으므로 앱으로 넘어갑니다']],
+ [21,25,'8. 앱으로 점프합니다',['UART 정리 → IRQ · SysTick 끄기 → 캐시 clean 후 끄기','→ VTOR · MSP 설정 → 앱 리셋벡터로 분기']],
+ [25,27,'9. 앱이 실행됩니다',['워치독은 계속 동작합니다 (앱이 주기적으로 kick)','QSPI는 XIP 상태를 유지합니다']],
+ [27,30.1,'검증에 실패하면?',['UART 업데이트 루프로 들어갑니다','XMODEM 수신 → 4 KB 소거 · 256 B 프로그램 → 다시 검증']],
+];
+const capG=CAPS.map(c=>{const g=el('g',{});
+  el('text',{x:860,y:170,'font-size':44,'font-weight':'bold','dominant-baseline':'central',fill:'white'},g,c[2]);
+  lines(g,860,238+ (c[3].length-1)*0,c[3],27,'start',C.mute,1.45).forEach((e,i)=>e.setAttribute('y',232+i*40));
+  return g});
+// checklist for validation scene
+const CHK=[[15.6,'헤더 매직 · 버전 · 크기'],[16.6,'CRC-32 (4 KB마다 WDT 급식)'],[17.6,'초기 SP가 RAM 안'],[18.5,'리셋벡터 Thumb · 이미지 범위']];
+const chkG=CHK.map((c,i)=>{const g=el('g',{});
+  const x=860+(i%2)*480,y=300+Math.floor(i/2)*44;
+  el('text',{x,y,'font-size':25,'dominant-baseline':'central',fill:C.green,'font-weight':'bold'},g,'✔');
+  el('text',{x:x+36,y,'font-size':25,'dominant-baseline':'central',fill:C.txt},g,c[1]);return g});
+
+// ---- memory map ----
+const lbQ=el('text',{x:860,y:420,'font-size':22,'dominant-baseline':'central',fill:C.mute},S,'QSPI NOR (XIP)  0x60000000 ~');
+const Q=[[150,'Boot ROM 헤더','0x60000000',C.purple],[230,'부트로더 128 KB','0x60001000',C.blue],[110,'앱 헤더','0x60020000',C.amber],[470,'앱 (XIP)','0x60020400',C.green]];
+const R=[[170,'.data · .bss','boot_request',C.mute],[150,'.ramfunc','NOR 쓰기 코드',C.red],[490,'여유 영역 (앱 사용)','2 MB RAM',C.line],[150,'스택 ↓','0x20200000',C.mute]];
+function bar(y,segs){let x=860;return segs.map(s=>{const g=el('g',{});
+  const r=el('rect',{x,y,width:s[0]-4,height:92,rx:8,fill:C.panel,stroke:s[3],'stroke-width':3},g);
+  lines(g,x+(s[0]-4)/2,y+46,[s[1],s[2]],17,'middle','white',1.45);
+  const o={g,r,x:x,w:s[0]-4,y,col:s[3]};x+=s[0];return o})}
+const qs=bar(440,Q);
+const lbR=el('text',{x:860,y:572,'font-size':22,'dominant-baseline':'central',fill:C.mute},S,'RAM  0x20000000 ~ 0x20200000');
+const rs=bar(592,R);
+// jump arrow
+const jp=el('path',{d:'M1125,436 Q1354,330 1583,436',fill:'none',stroke:C.green,'stroke-width':6,'stroke-linecap':'round'});
+const jh=el('path',{d:'M1569,416 L1585,438 L1561,436 Z',fill:C.green});
+jp.setAttribute('pathLength',100);
+// loop diagram (last scene)
+const loopG=el('g',{});
+[['UART XMODEM 수신',C.amber],['NOR 소거 · 프로그램',C.red],['boot_validate()',C.blue]].forEach((b,i)=>{
+  const x=860+i*340;
+  el('rect',{x,y:470,width:280,height:96,rx:14,fill:C.panel,stroke:b[1],'stroke-width':3},loopG);
+  lines(loopG,x+140,518,[b[0]],25,'middle','white');
+  if(i<2){el('line',{x1:x+284,y1:518,x2:x+332,y2:518,stroke:C.line,'stroke-width':4},loopG);el('path',{d:`M${x+336},518 l-14,-9 v18 z`,fill:C.line},loopG)}
+});
+el('path',{d:'M1860,566 v44 h-840 v-40',fill:'none',stroke:C.mute,'stroke-width':3,'stroke-dasharray':'8 7'},loopG);
+el('path',{d:'M1020,566 l-9,14 h18 z',fill:C.mute},loopG);
+el('text',{x:1440,y:640,'font-size':22,'text-anchor':'middle','dominant-baseline':'central',fill:C.mute},loopG,'유효하지 않으면 다시 수신');
+el('text',{x:1020,y:648,'font-size':22,'text-anchor':'middle','dominant-baseline':'central',fill:C.green},loopG,'');
+const ok2=el('text',{x:1020,y:660,'font-size':22,'text-anchor':'start','dominant-baseline':'central',fill:C.green},loopG,'');
+// ---- terminal ----
+el('rect',{x:860,y:700,width:960,height:310,rx:12,fill:'#020617',stroke:'#334155','stroke-width':2});
+el('text',{x:884,y:726,'font-size':20,'dominant-baseline':'central',fill:C.mute},S,'로그 (동작 설명용 예시 — 실제 UART 출력이 아님)');
+const LOG=[
+ [5.2,'[ROM] boot header ok → 0x60001000'],[8.2,'[BL ] clock 750 MHz'],[8.8,'[BL ] watchdog start 5000 ms'],[9.4,'[BL ] uart 115200 8N1'],[10.0,'[BL ] qspi nor detected'],
+ [11.3,'[BL ] icache / dcache on'],[13.4,'[BL ] boot_request: none'],
+ [15.6,'[BL ] header magic/version/size ok'],[16.6,'[BL ] crc32 ok'],[17.6,'[BL ] initial SP in RAM ok'],[18.5,'[BL ] reset vector ok'],
+ [19.4,'[BL ] image valid'],[22.0,'[BL ] jump → 0x60020400'],[25.4,'[APP] running'],[27.6,'[BL ] image invalid → UART update loop']];
+const logT=[0,1,2,3,4,5,6,7].map(i=>el('text',{x:884,y:764+i*29,'font-size':21,'dominant-baseline':'central',fill:'#a7f3d0',class:'mono'},S,''));
+// progress
+el('rect',{x:0,y:1070,width:1920,height:10,fill:'#111c33'});
+const pb=el('rect',{x:0,y:1070,width:0,height:10,fill:C.blue});
+// title overlay
+const tg=el('g',{});
+el('rect',{width:1920,height:1080,fill:C.bg},tg);
+el('text',{x:960,y:430,'font-size':92,'font-weight':'bold','text-anchor':'middle','dominant-baseline':'central',fill:'white'},tg,'Cortex-M7 부트로더');
+el('text',{x:960,y:540,'font-size':54,'text-anchor':'middle','dominant-baseline':'central',fill:C.blueL},tg,'부팅 흐름 설명');
+el('text',{x:960,y:640,'font-size':30,'text-anchor':'middle','dominant-baseline':'central',fill:C.mute},tg,'Boot ROM → QSPI XIP → 이미지 검증 → 앱 점프');
+
+const segAct={ // [start,end] windows during which a segment is highlighted
+ q:[[[5,6.5]],[[6.5,15],[19.5,22]],[[15,21]],[[15,21],[22.5,27]]],
+ r:[[[8,11]],[[8,11],[15,25]],[[25,27]],[[8,11]]]
+};
+function inAny(t,w){return w.some(x=>t>=x[0]&&t<x[1])}
+function draw(t){
+  tg.setAttribute('opacity',1-prog(t,2.2,0.6)); tg.style.display=t<2.9?'':'none';
+  pb.setAttribute('width',1920*clamp(t/30));
+  // nodes
+  NODES.forEach((n,i)=>{
+    const vis=prog(t,2.5+i*0.08,0.5); const act=t>=n.a&&t<n.b, done=t>=n.b;
+    n.g.setAttribute('opacity',vis*(act||done?1:0.45));
+    const col=n.k==='d'?C.amber:C.blue;
+    n.r.setAttribute('fill',act?(n.k==='d'?'#92400e':'#1d4ed8'):done?C.greenD:C.panel);
+    n.r.setAttribute('stroke',act?(n.k==='d'?'#fcd34d':C.blueL):done?C.green:C.line);
+    n.r.setAttribute('transform',act?`translate(${NX+NW/2} ${n.y+NH/2}) scale(${1+0.015*Math.sin(t*8)}) translate(${-(NX+NW/2)} ${-(n.y+NH/2)})`:'');
+    n.ck.textContent=done?'✔':''; n.bd.textContent=(done&&n.res)?n.res:'';
+    if(n.ln) n.ln.setAttribute('stroke',done?C.green:C.line);
+  });
+  // captions
+  CAPS.forEach((c,i)=>{const o=Math.min(prog(t,c[0],0.35),1-prog(t,c[1]-0.3,0.3)); capG[i].setAttribute('opacity',t>=c[0]&&t<c[1]?o:0)});
+  chkG.forEach((g,i)=>g.setAttribute('opacity',(t>=15&&t<19.2)?prog(t,CHK[i][0],0.3):0));
+  // memory map
+  const showMap=t<27, mo=showMap?prog(t,3,0.6):0;
+  [...qs,...rs].forEach(o=>o.g.setAttribute('opacity',mo)); lbQ.setAttribute('opacity',mo); lbR.setAttribute('opacity',mo);
+  qs.forEach((o,i)=>{const a=inAny(t,segAct.q[i]);o.r.setAttribute('fill',a?o.col+'55':C.panel);o.r.setAttribute('stroke-width',a?5:3)});
+  rs.forEach((o,i)=>{const a=inAny(t,segAct.r[i]);o.r.setAttribute('fill',a?o.col+'55':C.panel);o.r.setAttribute('stroke-width',a?5:3)});
+  const jpg=prog(t,21.3,1.6);
+  jp.setAttribute('stroke-dasharray',`${100*jpg} 100`); jp.setAttribute('opacity',showMap&&t>=21.3?1:0);
+  jh.setAttribute('opacity',showMap&&jpg>0.97?1:0);
+  loopG.setAttribute('opacity',t>=27?prog(t,27.2,0.5):0);
+  // log (last 8 visible lines)
+  const vis=LOG.filter(l=>t>=l[0]); const show=vis.slice(-8);
+  logT.forEach((e,i)=>{e.textContent=show[i]?show[i][1]:'';
+    e.setAttribute('fill',show[i]&&show[i][1].includes('invalid')?'#fca5a5':'#a7f3d0');
+    e.setAttribute('opacity',show[i]?(i===show.length-1?1:0.75):0)});
+}
+window.draw=draw; draw(0);
+</script></body></html>
