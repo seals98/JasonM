@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2540" viewBox="0 0 1800 2540">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+<rect width="1800" height="2540" fill="white"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="42" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="900.0" y="48.0">Cortex-M7 부트로더 — 전체 동작 방식</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="20" text-anchor="middle" dominant-baseline="central" fill="#6b7280" font-weight="normal"><tspan x="900.0" y="92.0">Boot ROM → QSPI NOR(XIP) 부트로더 → 앱 검증·점프 / UART(XMODEM) 펌웨어 업데이트   |   750 MHz · RAM 2 MB</tspan></text>
+<rect x="30" y="120" width="1740" height="46" rx="8" fill="#1e293b"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="26" text-anchor="start" dominant-baseline="central" fill="white" font-weight="bold"><tspan x="52" y="143.0">① 하드웨어 구성과 메모리 맵</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="end" dominant-baseline="central" fill="#cbd5e1" font-weight="normal"><tspan x="1748" y="143.0">SoC는 미정: 주변장치 구성만 정해진 범용 Cortex-M7</tspan></text>
+<rect x="40" y="190" width="620" height="420" rx="16" fill="#f8fafc" stroke="#64748b" stroke-width="2.5"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="21" text-anchor="start" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="60" y="212.0">SoC  (Cortex-M7 750 MHz · I/D 캐시)</tspan></text>
+<rect x="60" y="250" width="170" height="80" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="145.0" y="277.2">Boot ROM</tspan><tspan x="145.0" y="302.8">(마스크 ROM)</tspan></text>
+<rect x="260" y="250" width="170" height="80" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="345.0" y="277.2">RAM 2 MB</tspan><tspan x="345.0" y="302.8">0x20000000</tspan></text>
+<rect x="460" y="250" width="170" height="80" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="545.0" y="277.2">QSPI 컨트롤러</tspan><tspan x="545.0" y="302.8">XIP / 인디렉트</tspan></text>
+<rect x="60" y="360" width="170" height="80" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="145.0" y="387.2">WDT</tspan><tspan x="145.0" y="412.8">워치독</tspan></text>
+<rect x="260" y="360" width="170" height="80" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="345.0" y="387.2">Cortex-M7</tspan><tspan x="345.0" y="412.8">CPU + 캐시</tspan></text>
+<rect x="460" y="360" width="170" height="80" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="545.0" y="387.2">UART</tspan><tspan x="545.0" y="412.8">업데이트 콘솔</tspan></text>
+<rect x="60" y="470" width="170" height="80" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="145.0" y="497.2">GDMA</tspan><tspan x="145.0" y="522.8">dma_copy()</tspan></text>
+<rect x="260" y="470" width="170" height="80" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="345.0" y="497.2">SysTick · NVIC</tspan><tspan x="345.0" y="522.8">시간 기준</tspan></text>
+<rect x="460" y="470" width="170" height="80" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="545.0" y="497.2">I2C · I3C</tspan><tspan x="545.0" y="522.8">마스터</tspan></text>
+<rect x="700" y="250" width="170" height="80" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="785.0" y="277.9">QSPI NOR 플래시</tspan><tspan x="785.0" y="302.2">16 MB · JEDEC</tspan></text>
+<polyline points="630,290 700,290" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polygon points="630,290 640,284 640,296" fill="#475569" opacity="0"/>
+<rect x="700" y="360" width="170" height="80" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="785.0" y="387.9">호스트 PC</tspan><tspan x="785.0" y="412.2">XMODEM-CRC 송신</tspan></text>
+<polyline points="630,400 700,400" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polygon points="630,400 640,394 640,406" fill="#475569" opacity="0"/>
+<rect x="700" y="470" width="170" height="80" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="785.0" y="497.9">I2C/I3C 장치</tspan><tspan x="785.0" y="522.1">EEPROM · PMIC 등</tspan></text>
+<polyline points="630,510 700,510" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polygon points="630,510 640,504 640,516" fill="#475569" opacity="0"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#6b7280" font-weight="normal"><tspan x="682" y="226.0">외부</tspan></text>
+<line x1="682" y1="238" x2="682" y2="560" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 5"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="20" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="1135" y="205.0">QSPI NOR (XIP 창)  0x60000000</tspan></text>
+<rect x="940" y="225" width="390" height="60" rx="6" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1135.0" y="243.5">Boot ROM 이미지 헤더 4 KB</tspan><tspan x="1135.0" y="266.5">0x60000000 (SoC 전용 내용)</tspan></text>
+<rect x="940" y="285" width="390" height="120" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1135.0" y="322.1">부트로더 (벡터 0x60001000)</tspan><tspan x="1135.0" y="345.0">총 128 KB 영역 · 코드는 XIP로 실행</tspan><tspan x="1135.0" y="368.0">현재 사용량 약 6.8 KB (헤더 패딩 포함)</tspan></text>
+<rect x="940" y="405" width="390" height="54" rx="6" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1135.0" y="420.5">앱 이미지 헤더 0x400  @0x60020000</tspan><tspan x="1135.0" y="443.5">매직 · 크기 · CRC-32 · 버전</tspan></text>
+<rect x="940" y="459" width="390" height="150" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1135.0" y="511.1">앱 (벡터 0x60020400 ~)</tspan><tspan x="1135.0" y="534.0">최대 약 16 MB − 128 KB</tspan><tspan x="1135.0" y="557.0">XIP 실행 · UART로 갱신</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="20" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="1565" y="205.0">RAM  0x20000000 ~ 0x20200000 (2 MB)</tspan></text>
+<rect x="1390" y="225" width="370" height="60" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1575.0" y="243.5">.data · .bss · .noinit</tspan><tspan x="1575.0" y="266.5">boot_request(리셋 후에도 유지)</tspan></text>
+<rect x="1390" y="285" width="370" height="70" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1575.0" y="308.5">.ramfunc  (부팅 시 플래시에서 복사)</tspan><tspan x="1575.0" y="331.5">NOR 소거/쓰기 코드: XIP 해제 중에도 실행</tspan></text>
+<rect x="1390" y="355" width="370" height="170" rx="6" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1575.0" y="417.1">여유 영역 (앱이 사용)</tspan><tspan x="1575.0" y="440.0">앱의 초기 SP는 0x20000000 초과 ~</tspan><tspan x="1575.0" y="463.0">0x20200000 이하이면 유효</tspan></text>
+<rect x="1390" y="525" width="370" height="84" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1575.0" y="555.5">부트로더 스택 ↓</tspan><tspan x="1575.0" y="578.5">0x20200000에서 시작</tspan></text>
+<polyline points="1330,315 1390,320" fill="none" stroke="#dc2626" stroke-width="2.4" stroke-dasharray="7 5" marker-end="url(#ah)"/>
+<rect x="30" y="650" width="1740" height="46" rx="8" fill="#1e293b"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="26" text-anchor="start" dominant-baseline="central" fill="white" font-weight="bold"><tspan x="52" y="673.0">② 부팅 · 업데이트 흐름</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="end" dominant-baseline="central" fill="#cbd5e1" font-weight="normal"><tspan x="1748" y="673.0">왼쪽 열: 정상 부팅 경로   /   오른쪽 열: UART 업데이트 루프</tspan></text>
+<rect x="340" y="724" width="320" height="52" rx="26.0" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="21" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="500.0" y="750.0">전원 ON / 리셋</tspan></text>
+<rect x="180.0" y="806" width="640" height="76" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="500.0" y="831.2">Boot ROM 실행 → QSPI의 부트로더를 XIP로 시작</tspan><tspan x="500.0" y="856.8">(이미지 헤더 0x60000000, 벡터 0x60001000)</tspan></text>
+<rect x="180.0" y="912" width="640" height="76" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="500.0" y="937.2">board_init(): 클럭 750 MHz → WDT 시작(5초)</tspan><tspan x="500.0" y="962.8">→ UART → QSPI/NOR ID 확인</tspan></text>
+<rect x="180.0" y="1018" width="640" height="52" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="500.0" y="1044.0">I-Cache / D-Cache 켜기</tspan></text>
+<polygon points="500,1110.0 735.0,1170 500,1230.0 265.0,1170" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="500" y="1157.2">앱이 업데이트를 요청했나?</tspan><tspan x="500" y="1182.8">(boot_request 매직)</tspan></text>
+<rect x="180.0" y="1260" width="640" height="106" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="500.0" y="1288.7">boot_validate()  이미지 검증</tspan><tspan x="500.0" y="1313.0">① 헤더 매직 · 버전 · 크기   ② CRC-32 (4 KB마다 WDT 급식)</tspan><tspan x="500.0" y="1337.3">③ 초기 SP가 RAM 안   ④ 리셋벡터 Thumb · 이미지 범위 안</tspan></text>
+<polygon points="500,1415.0 665.0,1470 500,1525.0 335.0,1470" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="500" y="1470.0">이미지 유효?</tspan></text>
+<rect x="180.0" y="1570" width="640" height="112" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="500.0" y="1601.7">앱으로 점프  boot_jump()</tspan><tspan x="500.0" y="1626.0">UART 정리 → IRQ · SysTick 끄기 → 캐시 clean 후 끄기</tspan><tspan x="500.0" y="1650.3">→ VTOR · MSP 설정 → 앱 리셋벡터로 분기</tspan></text>
+<rect x="220" y="1716" width="560" height="56" rx="28.0" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="500.0" y="1744.0">앱 실행 (WDT는 계속 동작 · QSPI는 XIP 유지)</tspan></text>
+<polyline points="500,776 500,806" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="500,882 500,912" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="500,988 500,1018" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="500,1070 500,1110" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="500,1230 500,1260" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<rect x="526" y="1231" width="44" height="26" rx="6" fill="white" opacity="0.92"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#475569" font-weight="bold"><tspan x="548" y="1245.0">아니오</tspan></text>
+<polyline points="500,1366 500,1415" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="500,1525 500,1570" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<rect x="506" y="1534" width="44" height="26" rx="6" fill="white" opacity="0.92"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#475569" font-weight="bold"><tspan x="528" y="1548.0">예</tspan></text>
+<polyline points="500,1682 500,1716" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<rect x="1030.0" y="1131" width="640" height="78" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1350.0" y="1157.2">UART 안내 출력 후 &#x27;C&#x27; 전송</tspan><tspan x="1350.0" y="1182.8">(XMODEM-CRC 시작)</tspan></text>
+<rect x="1030.0" y="1249" width="640" height="92" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1350.0" y="1282.2">블록 수신 (128 B / 1 KB) → CRC16 확인</tspan><tspan x="1350.0" y="1307.8">오류는 NAK 재전송 · 중복 블록은 ACK만 · 비정상은 취소</tspan></text>
+<rect x="1030.0" y="1381" width="640" height="126" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1350.0" y="1418.3">flash_program(): 쓰기 직전에 4 KB 섹터 소거</tspan><tspan x="1350.0" y="1444.0">→ 256 B 페이지 단위 프로그램</tspan><tspan x="1350.0" y="1469.6">RAM 코드로 실행 · 그동안 XIP 해제 · WDT 급식</tspan></text>
+<rect x="1030.0" y="1547" width="640" height="60" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1350.0" y="1577.0">EOT 수신 → 캐시 무효화 → boot_validate()</tspan></text>
+<polygon points="1350,1638.0 1500.0,1690 1350,1742.0 1200.0,1690" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1350" y="1690.0">이미지 유효?</tspan></text>
+<polyline points="1350,1209 1350,1249" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="1350,1341 1350,1381" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="1350,1507 1350,1547" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="1350,1607 1350,1638" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="735,1170 1030.0,1170" fill="none" stroke="#ea580c" stroke-width="2.4" marker-end="url(#ah)"/>
+<rect x="768" y="1134" width="44" height="26" rx="6" fill="white" opacity="0.92"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#ea580c" font-weight="bold"><tspan x="790" y="1148.0">예</tspan></text>
+<polyline points="665,1470 905,1470 905,1170 1030.0,1170" fill="none" stroke="#ea580c" stroke-width="2.4" marker-end="url(#ah)"/>
+<rect x="713" y="1442" width="44" height="26" rx="6" fill="white" opacity="0.92"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#ea580c" font-weight="bold"><tspan x="735" y="1456.0">아니오</tspan></text>
+<polyline points="1200,1690 880,1690 880,1626 820.0,1626" fill="none" stroke="#16a34a" stroke-width="2.4" marker-end="url(#ah)"/>
+<rect x="988" y="1660" width="44" height="26" rx="6" fill="white" opacity="0.92"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#16a34a" font-weight="bold"><tspan x="1010" y="1674.0">예</tspan></text>
+<polyline points="1500,1690 1722,1690 1722,1170 1670.0,1170" fill="none" stroke="#ea580c" stroke-width="2.4" marker-end="url(#ah)"/>
+<rect x="1700" y="1416" width="44" height="26" rx="6" fill="white" opacity="0.92"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#ea580c" font-weight="bold"><tspan x="1722" y="1430.0">아니오</tspan></text>
+<rect x="30" y="1810" width="1740" height="46" rx="8" fill="#1e293b"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="26" text-anchor="start" dominant-baseline="central" fill="white" font-weight="bold"><tspan x="52" y="1833.0">③ 소프트웨어 계층 (hal.h가 칩 의존 경계)</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="end" dominant-baseline="central" fill="#cbd5e1" font-weight="normal"><tspan x="1748" y="1833.0">src/ 는 칩과 무관, 칩 전용 코드는 platform/ 에만</tspan></text>
+<rect x="40" y="1880" width="860" height="76" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="20" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="470.0" y="1918.0">main.c   부팅 흐름 · 점프 · 캐시/NVIC 정리 (cm7.h)</tspan></text>
+<rect x="920" y="1880" width="840" height="76" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="20" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="1340.0" y="1918.0">board.c   초기화 순서 · UART 업데이트 루프</tspan></text>
+<rect x="40" y="1976" width="275" height="84" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="177.5" y="2005.2">boot.c</tspan><tspan x="177.5" y="2030.8">이미지 검증</tspan></text>
+<rect x="327" y="1976" width="275" height="84" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="464.5" y="2005.2">crc32.c</tspan><tspan x="464.5" y="2030.8">CRC-32</tspan></text>
+<rect x="614" y="1976" width="275" height="84" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="751.5" y="2005.2">xmodem.c</tspan><tspan x="751.5" y="2030.8">XMODEM-CRC 수신</tspan></text>
+<rect x="901" y="1976" width="275" height="84" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1038.5" y="2005.2">slot.c</tspan><tspan x="1038.5" y="2030.8">앱 슬롯 지연 소거·쓰기</tspan></text>
+<rect x="1188" y="1976" width="275" height="84" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1325.5" y="2005.2">nor.c</tspan><tspan x="1325.5" y="2030.8">JEDEC NOR · RAMFUNC</tspan></text>
+<rect x="1475" y="1976" width="275" height="84" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1612.5" y="2005.2">dma.c</tspan><tspan x="1612.5" y="2030.8">GDMA + 캐시 정합</tspan></text>
+<rect x="40" y="2082" width="1720" height="62" rx="10" fill="#1e293b" stroke="#1e293b" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="20" text-anchor="middle" dominant-baseline="central" fill="white" font-weight="bold"><tspan x="900.0" y="2113.0">hal.h — clock · time │ WDT │ UART │ QSPI(xfer · XIP 진입/해제) │ I2C │ I3C │ GDMA │ cache</tspan></text>
+<rect x="40" y="2166" width="590" height="112" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="335.0" y="2185.6">platform/template</tspan><tspan x="335.0" y="2209.9">실제 SoC 포팅 대상</tspan><tspan x="335.0" y="2234.2">UART · QSPI · WDT · I2C · I3C · PLL · GDMA = TODO 스텁</tspan><tspan x="335.0" y="2258.5">(SysTick · 캐시는 구현됨)</tspan></text>
+<rect x="650" y="2166" width="540" height="112" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="920.0" y="2197.7">platform/sim</tspan><tspan x="920.0" y="2222.0">호스트 테스트용 모델</tspan><tspan x="920.0" y="2246.3">가상 QSPI NOR (쓰기 허용 · 페이지 · 비트 규칙 검사)</tspan></text>
+<rect x="1210" y="2166" width="550" height="112" rx="10" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1485.0" y="2197.7">qemu/</tspan><tspan x="1485.0" y="2222.0">자체 I2C 컨트롤러 모델 + 드라이버</tspan><tspan x="1485.0" y="2246.3">hal_i2c_xfer 구현 · AT24C EEPROM 데모</tspan></text>
+<polyline points="335.0,2144 335.0,2166" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="920.0,2144 920.0,2166" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<polyline points="1485.0,2144 1485.0,2166" fill="none" stroke="#475569" stroke-width="2.4" marker-end="url(#ah)"/>
+<rect x="30" y="2306" width="1740" height="46" rx="8" fill="#1e293b"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="26" text-anchor="start" dominant-baseline="central" fill="white" font-weight="bold"><tspan x="52" y="2329.0">④ 검증 환경과 현재 상태</tspan></text>
+<rect x="40" y="2376" width="560" height="118" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="20" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="320" y="2400.0">호스트 시뮬레이터  (make test)</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#16a34a" font-weight="bold"><tspan x="320" y="2426.0">✔ 통과</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="320" y="2454.9">x86 gcc + 가상 NOR + 가짜 XMODEM 송신자</tspan><tspan x="320" y="2477.0">이미지 검증 · XMODEM · NOR · 슬롯 계층</tspan></text>
+<rect x="620" y="2376" width="560" height="118" rx="10" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="20" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="900" y="2400.0">QEMU  mps2-an500  (Cortex-M7)</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#ca8a04" font-weight="bold"><tspan x="900" y="2426.0">✔ I2C 데모 PASS</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="900" y="2454.9">ARM 바이너리 실행 · jm-i2c 모델 + AT24C EEPROM</tspan><tspan x="900" y="2477.0">※ 부트로더 본체는 이 머신에서 아직 미실행</tspan></text>
+<rect x="1200" y="2376" width="560" height="118" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="18" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="20" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="bold"><tspan x="1480" y="2400.0">실제 보드</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="19" text-anchor="middle" dominant-baseline="central" fill="#dc2626" font-weight="bold"><tspan x="1480" y="2426.0">⚠ 미검증</tspan></text>
+<text font-family="'WenQuanYi Zen Hei','Noto Sans CJK KR',sans-serif" font-size="17" text-anchor="middle" dominant-baseline="central" fill="#1f2937" font-weight="normal"><tspan x="1480" y="2454.9">SoC 확정 후 platform/&lt;soc&gt; 작성 필요</tspan><tspan x="1480" y="2477.0">PLL · UART · QSPI · WDT · GDMA 레지스터 구현</tspan></text>
+</svg>
