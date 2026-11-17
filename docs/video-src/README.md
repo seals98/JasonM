@@ -1,4 +1,17 @@
-30 s boot-flow video (1920x1080, 30 fps). `scene.html` draws the frame for time `t` (`draw(t)`);
-`render.js` captures 900 frames with Playwright and pipes them to ffmpeg:
-`node render.js <abs path to this dir>`  ->  `boot_flow.mp4` in this dir (needs playwright + ffmpeg).
-The log panel in the video is illustrative, not real UART output.
+# 부팅 흐름 영상 (30 s, 1920x1080, 30 fps)
+
+`scene.html`은 시간 `t`(초)를 받아 그 순간의 화면을 그리는 `draw(t)`를 가집니다.
+
+## 브라우저에서 보기 (자동 재생 플레이어)
+파일을 내려받아 Chrome/Edge로 열면 바로 재생됩니다. 하단 컨트롤:
+- ⏸/▶ 재생·일시정지 (Space), ⏮ 처음부터 (Home)
+- 슬라이더로 원하는 시점으로 이동, 방향키 ←/→ 로 1초씩 이동
+- 속도 0.5× / 1× / 2×, 반복 체크박스
+- 콘솔에서 `draw(17)`처럼 직접 호출해도 됩니다.
+
+## 영상(MP4) 다시 만들기
+`render.js`가 `scene.html?render`(컨트롤 없는 1920x1080 고정 모드)를 열어 900프레임을 캡처하고 ffmpeg로 인코딩합니다.
+```
+node render.js <이 폴더의 절대 경로>      # -> boot_flow.mp4 (playwright, ffmpeg 필요)
+```
+영상 속 로그 패널은 동작 설명용 예시이며 실제 UART 출력이 아닙니다.
